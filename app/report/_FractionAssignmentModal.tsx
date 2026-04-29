@@ -12,7 +12,7 @@ interface FractionAssignmentModalProps {
   data: GainAndLossEvent[];
   showModal: boolean;
   setShowModal: (show: boolean) => void;
-  confirm: (fractions: number[]) => void;
+  confirm: (fractions: number[], isFrQualified: boolean[]) => void;
   state: "loading" | "error" | "ok";
 }
 
@@ -34,6 +34,11 @@ const fractionsFromEvents = (
     return (pctMap.get(datePair) ?? 100) / 100; // normalize before sending back
   });
 
+const isFrQualifiedFromEvents = (
+  events: GainAndLossEvent[],
+  isFrQualified: boolean,
+) => events.map(() => isFrQualified);
+
 export const FractionAssignmentModal = ({
   data,
   showModal,
@@ -45,10 +50,12 @@ export const FractionAssignmentModal = ({
   const [pctMap, setPctMap] = useState<Map<string, number>>(
     new Map<string, number>(),
   );
+  const [isFrQualified, setIsFrQualified] = useState(true);
 
   // Reset % if data changes
   useEffect(() => {
     setPctMap(new Map<string, number>());
+    setIsFrQualified(data[0]?.qualifiedIn !== "us");
   }, [data]);
 
   const salesByDates = Map.groupBy(
@@ -82,6 +89,17 @@ export const FractionAssignmentModal = ({
         {match(state)
           .with("ok", () => (
             <>
+              <div className="flex gap-2 items-baseline">
+                <input
+                  type="checkbox"
+                  id="isFrQualified"
+                  checked={isFrQualified}
+                  onChange={() => setIsFrQualified(!isFrQualified)}
+                />
+                <label htmlFor="isFrQualified">
+                  Is this a FR Qualified Plan?
+                </label>
+              </div>
               <div className="grid grid-cols-3 gap-4">
                 {["Grant Date", "Acquisition Date", "% FR"].map((h) => (
                   <div key={h} className="font-semibold">
@@ -113,7 +131,10 @@ export const FractionAssignmentModal = ({
                 <Button
                   color="green"
                   onClick={() => {
-                    confirm(fractionsFromEvents(data, pctMap));
+                    confirm(
+                      fractionsFromEvents(data, pctMap),
+                      isFrQualifiedFromEvents(data, isFrQualified),
+                    );
                     setShowModal(false);
                   }}
                   label="Confirm"
